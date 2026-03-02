@@ -9,7 +9,8 @@ const pixiHTML: string = `
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <style>
-  body { margin: 0; overflow: hidden; background-color: #1099bb; touch-action: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { overflow: hidden; background: #1099bb; touch-action: none; }
 </style>
 <script src="https://pixijs.download/release/pixi.min.js"></script>
 <script src="https://unpkg.com/@esotericsoftware/spine-pixi-v8@4.2.106/dist/iife/spine-pixi-v8.js"></script>
@@ -22,8 +23,8 @@ const { Spine } = spine;
 // ── Controller ────────────────────────────────────────────────────────────────
 const keyMap = {
   Space:'space', KeyW:'up', ArrowUp:'up',
-  KeyA:'left',  ArrowLeft:'left',
-  KeyS:'down',  ArrowDown:'down',
+  KeyA:'left', ArrowLeft:'left',
+  KeyS:'down', ArrowDown:'down',
   KeyD:'right', ArrowRight:'right',
 };
 
@@ -41,8 +42,7 @@ class Controller {
   }
   _kd(e) {
     const k = keyMap[e.code]; if (!k) return;
-    const now = Date.now();
-    this.keys[k].doubleTap = this.keys[k].doubleTap || now - this.keys[k].timestamp < 300;
+    this.keys[k].doubleTap = this.keys[k].doubleTap || Date.now() - this.keys[k].timestamp < 300;
     this.keys[k].pressed = true;
   }
   _ku(e) {
@@ -51,20 +51,19 @@ class Controller {
     if (this.keys[k].doubleTap) this.keys[k].doubleTap = false;
     else this.keys[k].timestamp = Date.now();
   }
-  // Called every frame from the joystick logic
   applyJoystick(dx, dy, active) {
-    const WALK = 0.25, RUN = 0.65;
+    const WALK = 0.22, RUN = 0.60;
     if (!active) {
       this.keys.left.pressed = this.keys.right.pressed = this.keys.down.pressed = false;
       this.keys.left.doubleTap = this.keys.right.doubleTap = false;
       return;
     }
     if (dx < -WALK) {
-      this.keys.left.pressed    = true;  this.keys.right.pressed   = false;
-      this.keys.left.doubleTap  = dx < -RUN; this.keys.right.doubleTap = false;
+      this.keys.left.pressed = true;  this.keys.right.pressed = false;
+      this.keys.left.doubleTap = dx < -RUN; this.keys.right.doubleTap = false;
     } else if (dx > WALK) {
-      this.keys.right.pressed   = true;  this.keys.left.pressed    = false;
-      this.keys.right.doubleTap = dx > RUN;  this.keys.left.doubleTap  = false;
+      this.keys.right.pressed = true; this.keys.left.pressed = false;
+      this.keys.right.doubleTap = dx > RUN; this.keys.left.doubleTap = false;
     } else {
       this.keys.left.pressed = this.keys.right.pressed = false;
       this.keys.left.doubleTap = this.keys.right.doubleTap = false;
@@ -80,19 +79,16 @@ class Scene {
     this.sky  = Sprite.from('sky');
     this.sky.anchor.set(0, 1);
     this.sky.width = width; this.sky.height = height;
-
-    const bgTex  = Texture.from('background');
-    const mgTex  = Texture.from('midground');
-    const plTex  = Texture.from('platform');
-    const maxH   = plTex.height;
-    const plH    = Math.min(maxH, height * 0.4);
-    const scale  = (this.scale = plH / maxH);
-    const base   = { tileScale:{x:scale,y:scale}, anchor:{x:0,y:1}, applyAnchorToTexture:true };
-
-    this.background = new TilingSprite({ texture:bgTex,  width, height:bgTex.height*scale, ...base });
-    this.midground  = new TilingSprite({ texture:mgTex,  width, height:mgTex.height*scale, ...base });
-    this.platform   = new TilingSprite({ texture:plTex,  width, height:plH,               ...base });
-
+    const bgTex = Texture.from('background');
+    const mgTex = Texture.from('midground');
+    const plTex = Texture.from('platform');
+    const maxH  = plTex.height;
+    const plH   = Math.min(maxH, height * 0.4);
+    const scale = (this.scale = plH / maxH);
+    const base  = { tileScale:{x:scale,y:scale}, anchor:{x:0,y:1}, applyAnchorToTexture:true };
+    this.background = new TilingSprite({ texture:bgTex, width, height:bgTex.height*scale, ...base });
+    this.midground  = new TilingSprite({ texture:mgTex, width, height:mgTex.height*scale, ...base });
+    this.platform   = new TilingSprite({ texture:plTex, width, height:plH, ...base });
     this.floorHeight = plH * 0.43;
     this.background.y = this.midground.y = -this.floorHeight;
     this.view.addChild(this.sky, this.background, this.midground, this.platform);
@@ -107,11 +103,11 @@ class Scene {
 
 // ── SpineBoy ──────────────────────────────────────────────────────────────────
 const anim = {
-  idle:  { name:'idle',       loop:true  },
-  walk:  { name:'walk',       loop:true  },
-  run:   { name:'run',        loop:true  },
+  idle:  { name:'idle',       loop:true },
+  walk:  { name:'walk',       loop:true },
+  run:   { name:'run',        loop:true },
   jump:  { name:'jump',       timeScale:1.5 },
-  hover: { name:'hoverboard', loop:true  },
+  hover: { name:'hoverboard', loop:true },
   spawn: { name:'portal' },
 };
 
@@ -125,7 +121,7 @@ class SpineBoy {
     this.view.addChild(this.directionalView);
     this.spine.state.data.defaultMix = 0.2;
   }
-  spawn()  { this.spine.state.setAnimation(0, anim.spawn.name); }
+  spawn() { this.spine.state.setAnimation(0, anim.spawn.name); }
   playAnimation({ name, loop=false, timeScale=1 }) {
     if (this.currentAnimationName === name) return;
     this.spine.state.setAnimation(0, name, loop).timeScale = timeScale;
@@ -136,7 +132,7 @@ class SpineBoy {
     if      (this.state.hover) this.playAnimation(anim.hover);
     else if (this.state.run)   this.playAnimation(anim.run);
     else if (this.state.walk)  this.playAnimation(anim.walk);
-    else                       this.playAnimation(anim.idle);
+    else                        this.playAnimation(anim.idle);
   }
   isSpawning() { return this.isAnimationPlaying(anim.spawn); }
   isAnimationPlaying({ name }) {
@@ -174,145 +170,154 @@ class SpineBoy {
   app.stage.addChild(scene.view, spineBoy.view);
   spineBoy.spawn();
 
-  // ── Virtual Joystick UI ──────────────────────────────────────────────────
-  const JR = 65;   // joystick base radius (px)
-  const HR = 28;   // handle radius (px)
+  // ── Virtual Joystick UI ───────────────────────────────────────────────────
+  const JR = 60;  // joystick base radius
+  const HR = 24;  // handle radius
 
-  let jActive = false, jOriginX = 0, jOriginY = 0;
-  let jDX = 0, jDY = 0, jTouchId = null;
+  let jActive = false, jDX = 0, jDY = 0, jTouchId = null;
   let jumpTouchId = null;
 
-  // Root overlay
+  // ── Overlay root ──────────────────────────────────────────────────────────
   const ui = document.createElement('div');
-  ui.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:10;';
+  ui.style.cssText =
+    'position:fixed;top:0;left:0;width:100%;height:100%;' +
+    'pointer-events:none;z-index:10;';
+  document.body.appendChild(ui);
 
-  // ── Left half: joystick touch zone ──────────────────────────────────────
+  // ── Joystick: fixed base always visible at bottom-left ───────────────────
+  // Touch zone covers the whole left 45% of the screen
   const jZone = document.createElement('div');
-  jZone.style.cssText = 'position:absolute;left:0;bottom:0;width:50%;height:55%;pointer-events:auto;';
+  jZone.style.cssText =
+    'position:absolute;left:0;top:0;width:45%;height:100%;pointer-events:auto;';
 
-  // Static hint ring (always visible, faint)
-  const jHint = document.createElement('div');
-  jHint.style.cssText =
-    'position:absolute;left:30%;top:55%;' +
-    'width:' + (JR*2) + 'px;height:' + (JR*2) + 'px;' +
-    'border-radius:50%;' +
-    'background:rgba(255,255,255,0.06);' +
-    'border:2px solid rgba(255,255,255,0.2);' +
-    'transform:translate(-50%,-50%);' +
-    'box-sizing:border-box;';
-
+  // The visible base ring – anchored 20% from left, 75% from top
   const jBase = document.createElement('div');
   jBase.style.cssText =
-    'position:absolute;display:none;' +
-    'width:' + (JR*2) + 'px;height:' + (JR*2) + 'px;' +
-    'border-radius:50%;' +
-    'background:rgba(255,255,255,0.13);' +
-    'border:3px solid rgba(255,255,255,0.45);' +
+    'position:absolute;' +
+    'left:50%;top:72%;' +             // center of zone
     'transform:translate(-50%,-50%);' +
-    'box-shadow:0 4px 20px rgba(0,0,0,0.35);' +
-    'box-sizing:border-box;';
+    'width:'  + (JR*2) + 'px;' +
+    'height:' + (JR*2) + 'px;' +
+    'border-radius:50%;' +
+    'background:rgba(255,255,255,0.10);' +
+    'border:2.5px solid rgba(255,255,255,0.38);';
 
+  // The movable handle – child of jBase, centered by default
   const jHandle = document.createElement('div');
   jHandle.style.cssText =
     'position:absolute;' +
-    'width:' + (HR*2) + 'px;height:' + (HR*2) + 'px;' +
-    'border-radius:50%;' +
-    'background:rgba(255,255,255,0.85);' +
+    'left:50%;top:50%;' +
     'transform:translate(-50%,-50%);' +
-    'box-shadow:0 3px 10px rgba(0,0,0,0.4);' +
-    'transition:background 0.1s;' +
-    'top:50%;left:50%;';
+    'width:'  + (HR*2) + 'px;' +
+    'height:' + (HR*2) + 'px;' +
+    'border-radius:50%;' +
+    'background:rgba(255,255,255,0.80);' +
+    'box-shadow:0 2px 10px rgba(0,0,0,0.45);' +
+    'transition:background 0.12s;';
 
   jBase.appendChild(jHandle);
-  jZone.appendChild(jHint);
   jZone.appendChild(jBase);
+  ui.appendChild(jZone);
 
-  // ── Right half: jump button ─────────────────────────────────────────────
+  // ── Jump button: bottom-right corner ─────────────────────────────────────
   const jumpZone = document.createElement('div');
   jumpZone.style.cssText =
-    'position:absolute;right:0;bottom:0;width:50%;height:55%;' +
-    'pointer-events:auto;' +
-    'display:flex;align-items:flex-end;justify-content:flex-end;' +
-    'padding:32px;box-sizing:border-box;';
+    'position:absolute;right:0;top:0;width:55%;height:100%;pointer-events:auto;';
 
   const jumpBtn = document.createElement('div');
-  jumpBtn.innerHTML = '<span style="font-size:22px;line-height:1;">&#9651;</span>';
   jumpBtn.style.cssText =
-    'width:76px;height:76px;border-radius:50%;' +
-    'background:rgba(255,255,255,0.16);' +
-    'border:3px solid rgba(255,255,255,0.5);' +
+    'position:absolute;' +
+    'right:32px;bottom:32px;' +
+    'width:72px;height:72px;' +
+    'border-radius:50%;' +
+    'background:rgba(255,255,255,0.14);' +
+    'border:2.5px solid rgba(255,255,255,0.45);' +
     'display:flex;align-items:center;justify-content:center;' +
-    'color:rgba(255,255,255,0.88);' +
-    'box-shadow:0 4px 18px rgba(0,0,0,0.3);' +
+    'box-shadow:0 4px 18px rgba(0,0,0,0.28);' +
     'user-select:none;' +
     'transition:background 0.1s,transform 0.08s;';
 
-  // Label under jump button
-  const jumpLabel = document.createElement('div');
-  jumpLabel.textContent = 'JUMP';
-  jumpLabel.style.cssText =
-    'font-family:sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;' +
-    'color:rgba(255,255,255,0.5);text-align:center;margin-top:6px;';
+  // Up-arrow icon
+  const jumpIcon = document.createElement('div');
+  jumpIcon.style.cssText =
+    'width:0;height:0;' +
+    'border-left:12px solid transparent;' +
+    'border-right:12px solid transparent;' +
+    'border-bottom:20px solid rgba(255,255,255,0.85);' +
+    'margin-bottom:4px;';
 
-  const jumpWrap = document.createElement('div');
-  jumpWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
-  jumpWrap.appendChild(jumpBtn);
-  jumpWrap.appendChild(jumpLabel);
-  jumpZone.appendChild(jumpWrap);
-
-  ui.appendChild(jZone);
+  jumpBtn.appendChild(jumpIcon);
+  jumpZone.appendChild(jumpBtn);
   ui.appendChild(jumpZone);
-  document.body.appendChild(ui);
 
-  // ── Joystick touch events ─────────────────────────────────────────────────
+  // ── Joystick helpers ──────────────────────────────────────────────────────
+  // Get the center of jBase in viewport coords (called once touch starts)
+  function getBaseCenter() {
+    const r = jBase.getBoundingClientRect();
+    return { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+  }
+
+  // Move handle within base using base-local coordinates (origin = base center)
+  function setHandle(localX, localY) {
+    // localX/Y are already clamped to JR
+    // Map to jBase's own coordinate space: top-left of jBase = 0,0
+    jHandle.style.left = (JR + localX) + 'px';
+    jHandle.style.top  = (JR + localY) + 'px';
+    jHandle.style.transform = 'translate(-50%,-50%)';
+  }
+
+  function resetHandle() {
+    jHandle.style.left      = '50%';
+    jHandle.style.top       = '50%';
+    jHandle.style.transform = 'translate(-50%,-50%)';
+    jHandle.style.background = 'rgba(255,255,255,0.80)';
+  }
+
+  let baseCX = 0, baseCY = 0;
+
   jZone.addEventListener('touchstart', e => {
     e.preventDefault();
     if (jTouchId !== null) return;
-    const t = e.changedTouches[0];
+    const t  = e.changedTouches[0];
     jTouchId = t.identifier;
     jActive  = true;
-    const r = jZone.getBoundingClientRect();
-    jOriginX = t.clientX - r.left;
-    jOriginY = t.clientY - r.top;
+    const bc = getBaseCenter();
+    baseCX = bc.cx; baseCY = bc.cy;
     jDX = jDY = 0;
-    jBase.style.left    = jOriginX + 'px';
-    jBase.style.top     = jOriginY + 'px';
-    jBase.style.display = 'block';
-    jHandle.style.left  = '50%';
-    jHandle.style.top   = '50%';
+    setHandle(0, 0);
   }, { passive:false });
 
   jZone.addEventListener('touchmove', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
       if (t.identifier !== jTouchId) continue;
-      const r    = jZone.getBoundingClientRect();
-      const dx   = (t.clientX - r.left) - jOriginX;
-      const dy   = (t.clientY - r.top)  - jOriginY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
+      const rawX = t.clientX - baseCX;
+      const rawY = t.clientY - baseCY;
+      const dist = Math.sqrt(rawX*rawX + rawY*rawY);
       const cl   = Math.min(dist, JR);
-      const ang  = Math.atan2(dy, dx);
-      jDX = (cl/JR) * Math.cos(ang);
-      jDY = (cl/JR) * Math.sin(ang);
-      jHandle.style.left = (jOriginX + cl * Math.cos(ang)) + 'px';
-      jHandle.style.top  = (jOriginY + cl * Math.sin(ang)) + 'px';
-      jHandle.style.background = Math.abs(jDX) > 0.65
-        ? 'rgba(100,210,255,0.95)' : 'rgba(255,255,255,0.85)';
+      const ang  = Math.atan2(rawY, rawX);
+      const lx   = cl * Math.cos(ang);
+      const ly   = cl * Math.sin(ang);
+      jDX = lx / JR;
+      jDY = ly / JR;
+      setHandle(lx, ly);
+      jHandle.style.background = Math.abs(jDX) > 0.60
+        ? 'rgba(100,210,255,0.92)'
+        : 'rgba(255,255,255,0.80)';
     }
   }, { passive:false });
 
   const endJoystick = e => {
     for (const t of e.changedTouches) {
       if (t.identifier !== jTouchId) continue;
-      jActive = false; jTouchId = null; jDX = jDY = 0;
-      jBase.style.display = 'none';
-      jHandle.style.background = 'rgba(255,255,255,0.85)';
+      jTouchId = null; jActive = false; jDX = jDY = 0;
+      resetHandle();
     }
   };
   jZone.addEventListener('touchend',    endJoystick, { passive:false });
   jZone.addEventListener('touchcancel', endJoystick, { passive:false });
 
-  // ── Jump button touch events ──────────────────────────────────────────────
+  // ── Jump button ───────────────────────────────────────────────────────────
   jumpZone.addEventListener('touchstart', e => {
     e.preventDefault();
     if (jumpTouchId !== null) return;
@@ -322,7 +327,7 @@ class SpineBoy {
         t.clientY < br.top  || t.clientY > br.bottom) return;
     jumpTouchId = t.identifier;
     controller.keys.space.pressed = true;
-    jumpBtn.style.background = 'rgba(100,210,255,0.45)';
+    jumpBtn.style.background = 'rgba(100,210,255,0.40)';
     jumpBtn.style.transform  = 'scale(0.90)';
   }, { passive:false });
 
@@ -331,7 +336,7 @@ class SpineBoy {
       if (t.identifier !== jumpTouchId) continue;
       jumpTouchId = null;
       controller.keys.space.pressed = false;
-      jumpBtn.style.background = 'rgba(255,255,255,0.16)';
+      jumpBtn.style.background = 'rgba(255,255,255,0.14)';
       jumpBtn.style.transform  = 'scale(1)';
     }
   };
@@ -350,7 +355,7 @@ class SpineBoy {
     spineBoy.state.hover = controller.keys.down.pressed;
     if (controller.keys.left.pressed)       spineBoy.direction = -1;
     else if (controller.keys.right.pressed) spineBoy.direction =  1;
-    spineBoy.state.jump = controller.keys.space.pressed;
+    spineBoy.state.jump  = controller.keys.space.pressed;
 
     spineBoy.update();
 
